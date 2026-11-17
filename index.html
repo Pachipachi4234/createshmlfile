@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>.shml 独自スクリプト仕様書</title>
+    <style>
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: sans-serif;
+            margin: 32px;
+            line-height: 1.7;
+        }
+        h3 {
+            margin-top: 28px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #cccccc;
+            padding-bottom: 4px;
+        }
+        ul {
+            padding-left: 24px;
+        }
+        li {
+            margin-bottom: 6px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <h3>1. 基本構造・ルール</h3>
+    <ul>
+        <li><strong>ファイル拡張子</strong>：メモ帳やエディタで作成し、文字コード <strong>UTF-8</strong> で <code>〇〇.shml</code>（または <code>.txt</code>）として保存する。</li>
+        <li><strong>コメント行 (<code>#</code>)</strong>：行頭に <code>#</code> を書くとコメント（メモ）扱いになり、実行時は無視される。</li>
+        <li><strong>ブロック区切り (<code>_</code>)</strong>：異なる言語や処理ブロックを繋ぐときは、単独の行に <code>_</code>（アンダースコア1つ）を書く。</li>
+        <li><strong>スクリプト終了 (<code>__</code>)</strong>：ファイルの最後（または処理を止めたい場所）の単独の行に <code>__</code>（アンダースコア2つ）を書くと、それ以降の行は無視される。</li>
+        <li><strong>行範囲の複数指定 (<code>~</code>)</strong>：<code>("1~20")</code> のように <code>開始行~終了行</code> で範囲指定ができる（単一行なら <code>("5")</code>）。</li>
+    </ul>
+
+    <h3>2. <code>[change]</code> ブロック（画面UIの改造・追加・削除）</h3>
+    <p>左パネルのボタンやラベルを書き換えたり、新しいボタンを追加したりする専用ブロック。</p>
+    <ul>
+        <li><strong>文字の置き換え (<code>*</code>)</strong>：
+            <ul>
+                <li>書式：<code>(*"元の文字","行範囲")-("新しい文字")</code>（<code>*"元の文字"</code> の <code>*</code> は省略可）</li>
+                <li>例：<code>("図形追加",*"1~200")-("ルビ図形追加")</code> → 指定範囲内にある「図形追加」の文字を「ルビ図形追加」に書き換える。</li>
+            </ul>
+        </li>
+        <li><strong>カスタムボタンの追加 (<code>+</code> と <code>{button}</code>)</strong>：
+            <ul>
+                <li>書式：<code>(+"追加する行")-("ボタン表示名","{button}")-{button}:<アクションID></code></li>
+                <li>機能：レイヤー追加エリアの下部に緑色のカスタムボタンを追加し、クリック時に <code><アクションID></code> を発火させる。</li>
+            </ul>
+        </li>
+        <li><strong>ファイル選択ボタンの追加 (<code>+</code> と <code>{file}</code>)</strong>：
+            <ul>
+                <li>書式：<code>(+"追加する行")-("ボタン表示名","{file}")-{file}:<アクションID></code></li>
+                <li>機能：ファイル選択ダイアログを開くボタンを追加し、ファイル選択時に <code><アクションID></code> へ選択された <code>File</code> オブジェクトを渡す。</li>
+            </ul>
+        </li>
+        <li><strong>既存ボタンの非表示・消去 (<code>=</code>)</strong>：
+            <ul>
+                <li>書式：<code>(="消したい文字")</code></li>
+                <li>機能：レイヤー追加グリッドやカスタムエリア内にある該当テキストのボタンを非表示にする。</li>
+            </ul>
+        </li>
+        <li><strong>ボタンの並び順移動 (<code>/</code>)</strong>：
+            <ul>
+                <li>書式：<code>(/"移動する文字")-("移動先")</code></li>
+                <li>機能：レイヤー追加グリッド内の該当ボタンを末尾へ移動させる。</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>3. <code>[javascript]</code>（または <code>[js]</code>）ブロック（本体機能・キャンバス拡張）</h3>
+    <p>ThumbnailMaker本体の変数や関数に直接アクセスして自由自在に機能を拡張できるブロック。</p>
+    <ul>
+        <li><strong>書き方</strong>：<code>[javascript]</code> の次の行に <code>:</code>（コロン）を書き、その下にJSコードを記述する（<code>("1~10"):{ ... }</code> 形式も可）。</li>
+        <li><strong>アクション受信 (<code>onShmlAction</code>)</strong>：
+            <ul>
+                <li><code>[change]</code> で定義した <code><アクションID></code> と連動させる関数。</li>
+                <li>書式：<code>onShmlAction('アクションID', (arg) => { ... });</code>（<code>{file}</code> の場合は第1引数 <code>arg</code> に <code>File</code> が入る）。</li>
+            </ul>
+        </li>
+        <li><strong>直接操作できる本体の主要変数・関数</strong>：
+            <ul>
+                <li><code>layers</code>：全レイヤーの配列（<code>layers.push(layer)</code> で新規レイヤー追加）。</li>
+                <li><code>selectLayer(layer)</code>：指定したレイヤーを選択状態にし、右のキャンバスと左の編集パネルを更新する。</li>
+                <li><code>render()</code>：キャンバス全体を再描画する。</li>
+                <li><code>createDefaultRubyNodes(shapeType, w, h)</code>：図形・モザイク用の緑●頂点ルビ配列を生成する（<code>'rect'</code>, <code>'circle'</code>, <code>'triangle'</code>, <code>'star'</code>）。</li>
+                <li><code>bgImage</code> / <code>bgFilter</code> / <code>bgFilterOpacity</code> / <code>bgOpacity</code> / <code>bgColors</code>：背景画像やフィルター設定の直接変更。</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>4. <code>[html]</code> ブロック（独自UI・バッジ・パネルの注入）</h3>
+    <p>画面上に独自のHTML要素（フローティングバッジ、追加のスライダーUI、<code><script></code> タグなど）を直接埋め込むブロック。</p>
+    <ul>
+        <li><strong>書き方</strong>：<code>("行範囲"):{</code> と <code>}</code> の間に通常のHTMLタグを記述する。</li>
+        <li><strong>活用例</strong>：画面右下に稼働中バッジを表示したり、<code>inspectorPanel</code> に追加する専用の操作スライダーUIを作ったりできる。</li>
+    </ul>
+
+    <h3>5. ターミナル出力系 3言語ブロック（コンソールログ・対話入力）</h3>
+    <p>読み込み時に左下の <strong>「💻 .shml スクリプト実行ターミナル」</strong> を自動で開き、処理結果を表示するブロック。</p>
+    <ul>
+        <li><strong><code>[python]</code>（または <code>[py]</code>）ブロック</strong>：変数代入（<code>x = "文字"</code> / <code>x += "追記"</code>）、ダイアログ入力（<code>x = input("質問文\n")</code>）、出力（<code>print("文字")</code> / <code>print(f"変数:{x}")</code>）に対応。</li>
+        <li><strong><code>[java]</code> ブロック</strong>：変数宣言（<code>String s = "文字";</code> / <code>int</code> / <code>double</code> / <code>var</code>）と標準出力（<code>System.out.println(s);</code>）に対応。</li>
+        <li><strong><code>[php]</code> ブロック</strong>：変数代入（<code>$v = "文字";</code>）と画面出力（<code>echo $v;</code>）に対応。</li>
+    </ul>
+
+    <h3>6. 重複読み込み時の挙動</h3>
+    <ul>
+        <li>同じ <code>.shml</code> ファイルを複数回読み込むと、<code>[change]</code> のボタン追加や <code>[html]</code> の要素注入は<strong>上書きされずに重複して増殖</strong>する仕様になっている（複数のプラグインを重ね掛けしたり、同じUIを増やしたりできる）。</li>
+    </ul>
+
+</body>
+</html>
